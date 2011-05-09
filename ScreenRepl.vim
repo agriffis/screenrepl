@@ -49,7 +49,7 @@ function! ScreenRepl_Send(text)
 endfunction
 
 function ScreenRepl_Sessions(A,L,P)
-  return system('screen -ls | awk '.s:shquote('/attached/ {print $1}'))
+  return system('screen -ls | awk '.s:shquote('/[Aa]ttached/ {print $1}'))
 endfunction
 
 function ScreenRepl_Vars()
