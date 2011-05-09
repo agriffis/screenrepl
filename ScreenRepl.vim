@@ -18,6 +18,12 @@ function! ScreenRepl_Send(text)
         \ " -S " . b:screenrepl_session . 
         \ " -p " . b:screenrepl_window . 
         \ " -X stuff '" . substitute(a:text, "'", "'\\\\''", 'g') . "'")
+  if v:shell_error != 0
+    " probably the screen session has disappeared.
+    " kill the var so the user can call back
+    unlet b:screenrepl_session
+    echoerr "screen stuff failed, call back to try again"
+  endif
 endfunction
 
 function ScreenRepl_Sessions(A,L,P)
@@ -25,18 +31,29 @@ function ScreenRepl_Sessions(A,L,P)
 endfunction
 
 function ScreenRepl_Vars()
+  let l:sessions = split(ScreenRepl_Sessions('','',0), "\n")
+
+  " if the session has gone away, reset b:screenrepl_session
+  if exists("b:screenrepl_session")
+    if index(l:sessions, b:screenrepl_session) < 0
+      unlet b:screenrepl_session
+    end
+  end
+
+  " default to the current screen session or look for one
   if !exists("b:screenrepl_session") || !exists("b:screenrepl_window")
     if exists('$STY')
       let b:screenrepl_session = $STY
       let b:screenrepl_window = "1"
     else
-      let b:screenrepl_session =
-            \ substitute(ScreenRepl_Sessions('','',0), '\n.*', '', '')
+      let b:screenrepl_session = (len(l:sessions) == 1) ? l:sessions[0] : ""
       let b:screenrepl_window = "0"
     endif
-  end
-  let b:screenrepl_session = 
-        \ input("session name: ", b:screenrepl_session, "custom,ScreenRepl_Sessions")
+  endif
+
+  " ask the user
+  let b:screenrepl_session = input("session name: ", b:screenrepl_session,
+        \ "custom,ScreenRepl_Sessions")
   let b:screenrepl_window = input("window name: ", b:screenrepl_window)
 endfunction
 
