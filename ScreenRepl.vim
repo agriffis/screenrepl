@@ -2,7 +2,7 @@
 " Jonathan Palardy's slime.vim available from
 " http://technotales.wordpress.com/2007/10/03/like-slime-for-vim/
 "
-" Copyright 2009 Aron Griffis <agriffis@n01se.net>
+" Copyright 2009, 2011 Aron Griffis <agriffis@n01se.net>
 " Released under the GNU GPL v2
 
 if exists("g:loaded_screenrepl")
@@ -10,23 +10,36 @@ if exists("g:loaded_screenrepl")
 endif
 let g:loaded_screenrepl = "v1"
 
-function s:shquote(s)
+function! s:shquote(s)
   return "'" . substitute(a:s, "'", "'\\\\''", 'g') . "'"
 endfunction
 
-function s:lastline(s)
-  return substitute(a:s, ".*\\n\\(.\\)\\@=", '', '')
+function! s:lastline(s)
+  return substitute(a:s, '.*\n\%\(.\)\@=', '', '')
 endfunction
 
-function s:addnl(s)
+function! s:tweak(s)
   if &ft == 'python'
+    let l:s = a:s
+    " kill intermediate newlines because they cause the interpreter
+    " to assume the current block is finished.
+    let l:s = substitute(l:s, '\n\%\([ \t]*\n\)*\%\([ \t]\)\@=', '\n', 'g')
     " if the last line starts with whitespace and ends with newline,
-    " append an additional newline to finish the block
-    if s:lastline(a:s) =~ "^[ \t].*\n"
-      return "\n"
+    " append an additional newline to finish the block.
+    if s:lastline(l:s) =~ '^[ \t].*\n'
+      let l:s .= "\n"
     endif
+    return l:s
   endif
-  return ""
+  return a:s
+endfunction
+
+function! s:screen(cmd)
+  call system('screen'.
+        \ ' -S '.s:shquote(b:screenrepl_session).
+        \ ' -p '.s:shquote(b:screenrepl_window).
+        \ ' '.a:cmd)
+  return v:shell_error
 endfunction
 
 function! ScreenRepl_Send(text)
@@ -36,23 +49,25 @@ function! ScreenRepl_Send(text)
       return
     endif
   end
-  call system('screen'.
-        \ ' -S '.s:shquote(b:screenrepl_session).
-        \ ' -p '.s:shquote(b:screenrepl_window).
-        \ ' -X stuff '.s:shquote(a:text.s:addnl(a:text)))
-  if v:shell_error != 0
+  let l:tmp = tempname()
+  let l:text = s:tweak(a:text)
+  let l:binary = l:text[-1:] == "\n" ? '' : 'b'
+  call writefile(split(l:text, "\n"), l:tmp, l:binary)
+  if s:screen('-X readreg r '.s:shquote(l:tmp)) ||
+        \ s:screen('-X paste r')
     " probably the screen session has disappeared.
     " kill the var so the user can call back
     unlet b:screenrepl_session
     echoerr "screen stuff failed, call back to try again"
   endif
+  call delete(l:tmp)
 endfunction
 
-function ScreenRepl_Sessions(A,L,P)
+function! ScreenRepl_Sessions(A,L,P)
   return system('screen -ls | awk '.s:shquote('/[Aa]ttached/ {print $1}'))
 endfunction
 
-function ScreenRepl_Vars()
+function! ScreenRepl_Vars()
   let l:sessions = split(ScreenRepl_Sessions('','',0), "\n")
   if len(l:sessions) == 0
     echoerr "can't find any running screen sessions"
