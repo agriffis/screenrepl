@@ -2,7 +2,7 @@
 " Jonathan Palardy's slime.vim available from
 " http://technotales.wordpress.com/2007/10/03/like-slime-for-vim/
 "
-" Copyright 2009, 2011 Aron Griffis <agriffis@n01se.net>
+" Copyright 2009-2012, Aron Griffis <aron@arongriffis.com>
 " Released under the GNU GPL v2
 
 if exists("g:loaded_screenrepl")
@@ -105,4 +105,4 @@ endfunction
 
 vnoremap <C-c><C-c> "ry :call ScreenRepl_Send(@r)<CR>
 nmap <C-c><C-c> vip<C-c><C-c>
-nmap <C-c>v :call Screen_Vars()<CR>
+nmap <C-c>v :call ScreenRepl_Vars()<CR>
