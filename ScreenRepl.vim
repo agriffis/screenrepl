@@ -99,6 +99,9 @@ function! ScreenRepl_Vars()
 
   let b:screenrepl_window = input("window name: ", b:screenrepl_window)
   if len(b:screenrepl_window) == 0 | return 3 | endif
+  
+  " configure the screen session
+  call s:screen('-X msgwait 0')
 
   return 0 " success (we hope)
 endfunction
